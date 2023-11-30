@@ -373,9 +373,9 @@ func NewModuleFromBufferArgs(args NewModuleArgs) (*Module, error) {
 	C.set_print_fn()
 
 	// TODO: remove this once libbpf memory limit bump issue is solved
-	if err := bumpMemlockRlimit(); err != nil {
-		return nil, err
-	}
+	//if err := bumpMemlockRlimit(); err != nil {
+	//	return nil, err
+	//}
 
 	if args.BTFObjPath == "" {
 		args.BTFObjPath = "/sys/kernel/btf/vmlinux"
