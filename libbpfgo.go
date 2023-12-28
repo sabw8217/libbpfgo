@@ -18,6 +18,8 @@ import (
 	"sync"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -303,7 +305,14 @@ func bumpMemlockRlimit() error {
 	var rLimit syscall.Rlimit
 	rLimit.Max = 512 << 20 /* 512 MBs */
 	rLimit.Cur = 512 << 20 /* 512 MBs */
-	err := syscall.Setrlimit(C.RLIMIT_MEMLOCK, &rLimit)
+
+	var rLimitUnix unix.Rlimit
+	err := unix.Getrlimit(unix.RLIMIT_MEMLOCK, &rLimitUnix)
+	if err == nil && rLimitUnix.Cur >= rLimit.Cur {
+		return nil
+	}
+
+	err = syscall.Setrlimit(C.RLIMIT_MEMLOCK, &rLimit)
 	if err != nil {
 		return fmt.Errorf("error setting rlimit: %v", err)
 	}
@@ -373,9 +382,9 @@ func NewModuleFromBufferArgs(args NewModuleArgs) (*Module, error) {
 	C.set_print_fn()
 
 	// TODO: remove this once libbpf memory limit bump issue is solved
-	//if err := bumpMemlockRlimit(); err != nil {
-	//	return nil, err
-	//}
+	if err := bumpMemlockRlimit(); err != nil {
+		return nil, err
+	}
 
 	if args.BTFObjPath == "" {
 		args.BTFObjPath = "/sys/kernel/btf/vmlinux"
